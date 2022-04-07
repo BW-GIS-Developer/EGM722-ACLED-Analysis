@@ -6,11 +6,11 @@
 
     Graphs for entire date range : 
 
-        1 - Daily event counts
+        1 - Daily event counts     (DATA READY)
             
-        2 - Daily fatalities 
+        2 - Daily fatalities      (DATA READY)
             
-        3 - Daily activity  by force
+        3 - Daily activity  by force     (DATA READY)
         
         4 - Oblast count vs fatalities  
             
