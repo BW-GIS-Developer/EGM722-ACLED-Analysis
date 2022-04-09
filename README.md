@@ -12,11 +12,11 @@
             
         3 - Daily activity  by force     (COMPLETE)
         
-        4 - Oblast count vs fatalities  (DATA READY)
+        4 - Oblast count vs fatalities  (COMPLETE)
             
     Map for entire date range : 
     
-        5 - Oblast count vs fatalities (DATA READY)
+        5 - Oblast count vs fatalities (DATA READY) - Add Grid, Add Scale, Look at CRS issue
             
     Maps for Dec - Jan  vs  Feb - Mar:
 
