@@ -20,6 +20,6 @@
             
     Maps for Dec - Jan  vs  Feb - Mar:
 
-        6/7 - Counts in hexbins
+        6/7 - Counts in hexbins (WORKING ON) - Look at resolutions and NB ranges/colours
             
-        8/9 - Fatalities in hexbins
+        8/9 - Fatalities in hexbins (WORKING ON) - Look at resolutions and NB ranges/colours
