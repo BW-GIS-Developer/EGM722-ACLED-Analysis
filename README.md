@@ -16,7 +16,7 @@
             
     Map for entire date range : 
     
-        5 - Oblast count vs fatalities (DATA READY) - Add Grid, Add Scale, Look at CRS issue
+        5 - Oblast count vs fatalities (WORKING ON) - Add Grid, Add Scale, Look at CRS issue, Aestetics on map (halos?)
             
     Maps for Dec - Jan  vs  Feb - Mar:
 
