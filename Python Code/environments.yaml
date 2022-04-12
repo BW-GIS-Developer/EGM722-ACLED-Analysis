@@ -1,0 +1,12 @@
+name: acled_analysis
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8.8
+  - geopandas=0.9.0
+  - cartopy=0.18.0
+  - notebook=6.2.0
+  - h3-py=3.7.3
+  - jenkspy=0.2.0
+prefix: C:\Users\e16006469\Anaconda3\envs\acled_analysis
