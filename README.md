@@ -16,10 +16,17 @@
             
     Map for entire date range : 
     
-        5 - Oblast count vs fatalities (WORKING ON) - Add Grid, Add Scale, Look at CRS issue, Aestetics on map (halos?)
+        5 - Oblast count vs fatalities (COMPLETE)
             
     Maps for Dec - Jan  vs  Feb - Mar:
 
-        6/7 - Counts in hexbins (WORKING ON) - Look at resolutions and NB ranges/colours
+        6/7 - Counts in hexbins (COMPLETE)
             
-        8/9 - Fatalities in hexbins (WORKING ON) - Look at resolutions and NB ranges/colours
+        8/9 - Fatalities in hexbins (COMPLETE)
+
+
+    Go through code to input : 
+
+        Functions where possible
+
+        Docstrings in functions
