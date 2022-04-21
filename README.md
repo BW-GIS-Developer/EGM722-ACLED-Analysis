@@ -1,25 +1,11 @@
-# **Automate OSINT workflows with GIS**
+## **Automate OSINT workflows with GIS**
 
-## **Introduction**
+## **Overview**
 
-Testing MD
+Open-source intelligence (OSINT) is the collection and analysis of open-source (OS) datasets to provide intelligence products. The Armed Conflict Location & Event Data Project (ACLED)[^1] collects real-time data on the locations, dates, actors, fatalities of violence, and protests around the world (ACLED, 2022). As each event has an associated location and date, GIS can be employed to spatially, and temporally analyse this dataset to extract and visualise trends for intelligence products.
 
-``` python
+The ”ACLED Analysis” GIS tool was developed to automate such a workflow using the publicly available ACLED dataset; it will focus on the current conflict within Ukraine. It will detail incident and fatality counts over time, determine the most affected regions, and spatially plot the temporal patterns of the conflict.
 
-# Create a new column called "date" and convert the original string dates into datetime
-    acled["date"] = acled["event_date"].apply(convert_to_datetime)
+[^1]  The Armed Conflict Location & Event Data Project (ACLED); [http://acleddata.com](http://acleddata.com)
 
-    # Create geopandas dataframes for date range start - end
-    acled_daterange_se = acled[(acled["date"] >= start) & (acled["date"] <= end)]
-
-    # Create geopandas dataframes for date range start - mid
-    acled_daterange_sm = acled[(acled["date"] < mid) & (acled["date"] >= start)]
-    
-    # Create geopandas dataframes for date range mid - end
-    acled_daterange_me = acled[(acled["date"] >= mid) & (acled["date"] <= end)]
-    
-    return acled_daterange_se[columns].sort_values(by=["date"]), acled_daterange_sm[columns].sort_values(by=["date"]), acled_daterange_me[columns].sort_values(by=["date"])
-
-    ```
-
-    Testing MD
+## **Setup and Installation**
