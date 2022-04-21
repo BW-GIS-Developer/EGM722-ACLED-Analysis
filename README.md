@@ -45,13 +45,83 @@ The datasets required to run the code are detailed in table 2. To use the ACLED 
 
 This GIS tool has been developed to provide a solution to automate a common OSINT workflow using pre-existing, publicly available datasets; in this case, displaying trends within a subset of ACLED data. Multiple functions have been developed to perform various data engineering and analytical processes, allowing the script to follow a clear and logical workflow: 
 
-1.	Create three subsets of the original ACLED data for specified date ranges.
-2.	Calculate daily statistics for incidents and fatalities across the entire dataset.
-3.	Calculate statistics for incidents and fatalities, split by oblast.
-4.	Aggregate individual incidents into hexbins, summarising the incidents and fatalities for each.
-5.	Output these data into a variety of graphs and map products
+1.	Import python modules and set commonly used global variables.
+2.  Create three subsets of the original ACLED data for specified date ranges.
+3.	Calculate daily statistics for incidents and fatalities across the entire dataset.
+4.	Calculate statistics for incidents and fatalities across the entire dataset, split by oblast.
+5.	Aggregate individual incidents into hexbins, summarising the incidents and fatalities for each.
+6.	Output these data into a variety of graphs and map products
 
-### **Step 1: Create three subsets of the original ACLED data for specified date ranges**
+### **Step 1: Import python modules and set commonly used global variables**
+
+Import required python modules
+
+```python
+import geopandas as gpd
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import cartopy.crs as ccrs
+import matplotlib.patches as mpatch
+import matplotlib.patheffects as pe
+
+from cartopy.feature import ShapelyFeature
+from datetime import datetime
+from shapely.geometry import Polygon, Point
+
+import h3, jenkspy
+```
+
+Set commonly used global variables
+
+```python
+# ACLED dataset - read csv
+ukraine_acled_pandas = pd.read_csv(r"Data\ACLED\UkraineACLED.csv")
+
+# ACLED dataset - create list of XY coordinates as a Point
+acled_geometry = [Point(xy) for xy in zip(ukraine_acled_pandas.longitude, ukraine_acled_pandas.latitude)]
+
+# ACLED dataset - read dataset as a geodataframe by setting the geometry
+ukraine_acled_geopandas = gpd.GeoDataFrame(ukraine_acled_pandas, crs="EPSG:4326", geometry=acled_geometry)
+
+# Ukraine country boundary
+ukraine_boundary_geopandas = gpd.read_file(r"Data\Boundaries\UKR_Boundary.shp")
+
+# Ukraine oblast bondaries
+ukraine_oblast_geopandas = gpd.read_file(r"Data\Boundaries\UKR_Adm.shp")
+
+# Global country boudnaries
+global_boundary_geopandas = gpd.read_file(r"Data\Boundaries\GLB_Bnd.shp")
+
+# Calculate boundary extent for map display
+xmin, ymin, xmax, ymax = ukraine_boundary_geopandas.total_bounds
+
+# Set map coordinate system
+map_crs = ccrs.Mercator()
+
+# Start, middle and end dates
+date_start, date_mid, date_end = ((datetime(2022,1,1), datetime(2022,2,24), datetime(2022,4,15)))
+
+# ACLED dataset columns to keep (date will be calculated later on)
+columns_acled = ["actor1", "event_date", "date", "fatalities", "geometry"] 
+
+# Colours used for map products
+colour_ramp = ["ivory", "lightcoral", "firebrick", "darkred"]
+
+# Buffer values used for map products
+buffer_values = [5000, 10000, 15000, 20000, 25000, 30000]
+
+# Transparency values used for map products
+transparency_values = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
+
+# Shapely Feature for the Global boundaries
+GLB_outline = ShapelyFeature(global_boundary_geopandas["geometry"], map_crs, edgecolor='k', facecolor='darkseagreen')
+
+# Shapely Feature for the Ukrainian oblasts
+oblast_outline = ShapelyFeature(ukraine_oblast_geopandas["geometry"], map_crs, edgecolor='k', facecolor='tan')
+```
+
+### **Step 2: Create three subsets of the original ACLED data for specified date ranges**
 
 Two functions were developed for this section of the workflow:
 
@@ -96,4 +166,94 @@ The ``date`` column is then used to create a subsets of ACLED data for each date
     acled_daterange_me = acled[(acled["date"] >= mid) & (acled["date"] <= end)]
 ```
 
-Word count tracker : 456
+### **Step 3: Calculate daily statistics for incidents and fatalities across the entire dataset**
+
+One function was developed for this section of the workflow:
+
+```python
+def calculate_statistics(acled_all):
+    
+    # Store unique dates in a list
+    unique_dates_set = set(acled_all["date"].tolist())
+    unique_dates = list(unique_dates_set)
+    unique_dates.sort()
+
+    # Create dictionary to store statistics
+    statistics_by_date = {
+        "date" : [],
+        "count" : [],
+        "fatalities" : [],
+        "count_sum" : [],
+        "fatalities_sum" : [], 
+        "russian_actor" : [],
+        "ukraine_actor" : [],
+        "other_actor" : []
+    }
+    
+    # Create counter variables
+    count_sum = 0
+    count_fatal = 0
+
+    # Iterate over unique dates to create daily statistics
+    for date in unique_dates:
+
+        # Calculate daily statistics
+        daily_count = acled_all["date"].value_counts()[date]
+        daily_fatal = acled_all.loc[acled_all["date"] == date, "fatalities"].sum()
+        daily_russian = len(daily_events[daily_events["actor1"].str.contains("Russia")])
+        daily_ukraine = len(daily_events[daily_events["actor1"].str.contains("Ukraine")])
+        daily_other = daily_count - daily_russian - daily_ukraine
+
+        # Append daily statistics
+        statistics_by_date["date"].append(date)
+        statistics_by_date["count"].append(daily_count)
+        statistics_by_date["fatalities"].append(daily_fatal)
+        statistics_by_date["count_sum"].append(count_sum + daily_count)
+        statistics_by_date["fatalities_sum"].append(count_fatal + daily_fatal)
+        statistics_by_date["russian_actor"].append(daily_russian)
+        statistics_by_date["ukraine_actor"].append(daily_ukraine)
+        statistics_by_date["other_actor"].append(daily_other)
+
+        # Update counters
+        count_sum += daily_count
+        count_fatal += daily_fatal
+
+    return pd.DataFrame(statistics_by_date).sort_values(by=["date"])
+```
+
+The ``calculate_statistics`` function creates a list of unique dates within the ACLED subset spanning the entire date range, sorting these by ``date`` order. 
+
+For each date, calculations are made for:
+
+- ``daily_count``: The number of events
+- ``daily_fatal``: The number of fatalities
+- ``daily_russian``: The number of events where Russia is the actor
+- ``daily_ukraine``: The number of events where Ukraine is the actor
+- ``daily_other``: The number of events where another actor is responsible
+
+Counter variables are used to calculate the accumulative sums for events and fatalities.
+
+```python
+count_sum += daily_count
+count_fatal += daily_fatal
+```
+
+This data for daily statistics is then appended into the ``statistics_by_date`` dictionary, which finally is converted into a pandas dataframe to return as the function output.
+
+### **Step 4: Calculate statistics for incidents and fatalities across the entire dataset, split by oblast**
+
+
+
+### **Step 5: Aggregate individual incidents into hexbins, summarising the incidents and fatalities for each**
+
+
+
+### **Step 6: Output these data into a variety of graphs and map products**
+
+## **Results**
+
+## **Troubleshooting**
+
+## **References**
+
+Word count tracker : 602
