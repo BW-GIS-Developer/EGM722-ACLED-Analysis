@@ -54,7 +54,7 @@ This GIS tool has been developed to provide a solution to automate a common OSIN
 
 ### **Step 1: Import python modules and set commonly used global variables**
 
-Import required python modules
+Import required python modules:
 
 ```python
 import geopandas as gpd
@@ -72,7 +72,7 @@ from shapely.geometry import Polygon, Point
 import h3, jenkspy
 ```
 
-Set commonly used global variables
+Set commonly used global variables:
 
 ```python
 # ACLED dataset - read csv
@@ -242,7 +242,67 @@ This data for daily statistics is then appended into the ``statistics_by_date`` 
 
 ### **Step 4: Calculate statistics for incidents and fatalities across the entire dataset, split by oblast**
 
+One function was developed for this section of the workflow:
 
+```python
+def count_by_oblast(oblasts, acled):
+
+    # Create dictionary to store statistics
+    statistics_by_oblast = {
+        "Region" : [],
+        "count" : [],
+        "fatalities" : []
+    }
+
+    # Perform Spatial Join
+    acled_oblast_sj = gpd.sjoin(oblasts, acled, how='inner', lsuffix='left', rsuffix='right')
+
+    # Get a list of all region names
+    unique_regions = set(acled_oblast_sj['Region'].tolist())
+    unique_regions = list(unique_regions)
+    unique_regions.sort()
+
+    # Update dictionary for regions, counts and fatalities
+    for region in unique_regions:
+        fatal = acled_oblast_sj.loc[acled_oblast_sj["Region"] == region, "fatalities"].sum()
+        count = acled_oblast_sj["Region"].value_counts()[region]
+
+        statistics_by_oblast["Region"].append(region)
+        statistics_by_oblast["count"].append(count)
+        statistics_by_oblast["fatalities"].append(fatal)
+
+    # Convert dictionary into pandas dataframe
+    statistics_by_oblast_pandas = pd.DataFrame(statistics_by_oblast)
+
+    # Merge regions statistics to oblast regions to link geometry
+    oblast_statistics = statistics_by_oblast_pandas.merge(oblasts[["Region", "geometry"]])
+
+    # Calculate values for Natural Breaks Jenks
+    oblast_statistics["NBJ"] = pd.cut(oblast_statistics["count"], bins=jenkspy.jenks_breaks(oblast_statistics["count"], nb_class=4), labels=[1,2,3,4], include_lowest=True)
+    
+    return oblast_statistics
+```
+
+The ``count_by_oblast`` function spatially joins the ACLED events to the Ukrainian oblasts.
+
+```python
+acled_oblast_sj = gpd.sjoin(oblasts, acled, how='inner', lsuffix='left', rsuffix='right')
+```
+
+A list of oblast names is created and iterrated over to calculate the number of events and fatalities for each region; this is then appended to the ``statistics_by_oblast`` dictionary. Once complete, this dictionary is merged with the geopandas dataframe for the oblast regions to link these statistics to the oblast geometry.
+
+```python
+# Merge regions statistics to oblast regions to link geometry
+oblast_statistics = statistics_by_oblast_pandas.merge(oblasts[["Region", "geometry"]])
+```
+
+Finally, for each region, natural breaks (Jenks) values for the number of events and fatalities are calculated to create 4 classes based on natural groupings inherent in the data. These are used later in the script to apply a colour ramp symbology to display the data within a map frame.
+
+```python
+ oblast_statistics["NBJ"] = pd.cut(oblast_statistics["count"], bins=jenkspy.jenks_breaks(oblast_statistics["count"], nb_class=4), labels=[1,2,3,4], include_lowest=True)
+ ```
+
+ This function returns the oblast statistics, geometry, and symbology values as a pandas dataframe.
 
 ### **Step 5: Aggregate individual incidents into hexbins, summarising the incidents and fatalities for each**
 
