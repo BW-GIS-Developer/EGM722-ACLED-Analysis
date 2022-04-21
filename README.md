@@ -42,3 +42,58 @@ The datasets required to run the code are detailed in table 2. To use the ACLED 
 [^3]: ACLED export filters applied - From: 01 Jan 22, To: 15 Apr 22, Region: Europe, Country: Ukraine
 
 ## **Methodology**
+
+This GIS tool has been developed to provide a solution to automate a common OSINT workflow using pre-existing, publicly available datasets; in this case, displaying trends within a subset of ACLED data. Multiple functions have been developed to perform various data engineering and analytical processes, allowing the script to follow a clear and logical workflow: 
+
+1.	Create three subsets of the original ACLED data for specified date ranges.
+2.	Calculate daily statistics for incidents and fatalities across the entire dataset.
+3.	Calculate statistics for incidents and fatalities, split by oblast.
+4.	Aggregate individual incidents into hexbins, summarising the incidents and fatalities for each.
+5.	Output these data into a variety of graphs and map products
+
+### **Step 1: Create three subsets of the original ACLED data for specified date ranges**
+
+Two functions were developed for this section of the workflow:
+
+```python
+def convert_to_datetime(date):
+    
+    return datetime.strptime(date, "%d %B %Y")
+
+def calculate_datetime_ranges(acled, columns, start, mid, end):
+    
+    # Create a new column called "date" and convert the original string dates into datetime
+    acled["date"] = acled["event_date"].apply(convert_to_datetime)
+
+    # Create geopandas dataframes for date range start - end
+    acled_daterange_se = acled[(acled["date"] >= start) & (acled["date"] <= end)]
+
+    # Create geopandas dataframes for date range start - mid
+    acled_daterange_sm = acled[(acled["date"] < mid) & (acled["date"] >= start)]
+    
+    # Create geopandas dataframes for date range mid - end
+    acled_daterange_me = acled[(acled["date"] >= mid) & (acled["date"] <= end)]
+    
+    return acled_daterange_se[columns].sort_values(by=["date"]), acled_daterange_sm[columns].sort_values(by=["date"]), acled_daterange_me[columns].sort_values(by=["date"])
+```
+
+The ``calculate_datetime_ranges`` function parses through the ``event_date`` column within the ACLED dataset, converting each from a ``string`` into a ``datetime date``; this is achieved by passing each string value into the ``convert_to_datetime`` function and storing the returned date value into a new column called ``date``.
+
+```python 
+acled["date"] = acled["event_date"].apply(convert_to_datetime)
+```
+
+The ``date`` column is then used to create a subsets of ACLED data for each date range, one for the entire dataset, one for pre-invasion, and one for post-invasion.
+
+```python
+    # Create geopandas dataframes for date range start - end
+    acled_daterange_se = acled[(acled["date"] >= start) & (acled["date"] <= end)]
+
+    # Create geopandas dataframes for date range start - mid
+    acled_daterange_sm = acled[(acled["date"] < mid) & (acled["date"] >= start)]
+    
+    # Create geopandas dataframes for date range mid - end
+    acled_daterange_me = acled[(acled["date"] >= mid) & (acled["date"] <= end)]
+```
+
+Word count tracker : 456
