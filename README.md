@@ -306,7 +306,133 @@ Finally, for each region, natural breaks (Jenks) values for the number of events
 
 ### **Step 5: Aggregate individual incidents into hexbins, summarising the incidents and fatalities for each**
 
+One function was developed for this section of the workflow:
 
+```python
+def create_hexbins(acled, map, theme, sorted_NBJ, colour_ramp):
+
+    # Create dictionaries for storing hexbin data
+    acled_to_h3 = {}
+
+    h3_statistics = {
+        "Hexbin"  : [],
+        "count" : [],
+        "fatalities" : [],
+        "Geometry" : []
+    }
+
+    for n in range(0, len(acled) - 1):
+
+        # Get ACLED XY
+        xy = acled.iloc[n]["geometry"]
+
+        # Input X, Y, H3 resolution
+        hexbin = h3.geo_to_h3(xy.x, xy.y, 5)
+
+        # Calculate statistics to assign to hexbins
+        if hexbin not in acled_to_h3.keys():
+            acled_to_h3[hexbin] = {
+                "count" : 1,
+                "fatalities" : acled.iloc[n]["fatalities"],
+                "Boundary" : h3.h3_to_geo_boundary(hexbin, geo_json=False)
+             }
+        else:
+            acled_to_h3[hexbin]["count"] += 1
+            acled_to_h3[hexbin]["fatalities"] += acled.iloc[n]["fatalities"]
+
+    # Create dictionary for all hexbins and statistics to turn into DataFrame
+    for key, val in acled_to_h3.items():
+        h3_statistics["Hexbin"].append(key)
+        h3_statistics["count"].append(val["count"])
+        h3_statistics["fatalities"].append(val["fatalities"])
+        h3_statistics["Geometry"].append(Polygon(val["Boundary"]))
+
+    h3_geopandas = gpd.GeoDataFrame(h3_statistics)
+
+    h3_geopandas.sort_values(by=theme)
+
+    hexbins = h3_geopandas["Hexbin"].values.tolist()
+
+    for hexbin in hexbins:
+
+        count = h3_geopandas.loc[h3_geopandas["Hexbin"] == hexbin, theme].iloc[0]
+
+        # Assign symbology based on NBJ valuess
+        if count <= sorted_NBJ[0]:
+            colour_ramp_choice = 0
+        elif count > sorted_NBJ[0] and count <= sorted_NBJ[1]:
+            colour_ramp_choice = 1
+        elif count > sorted_NBJ[2] and count <= sorted_NBJ[3]:
+            colour_ramp_choice = 2
+        else:
+            colour_ramp_choice = 3
+        
+        # Get hexbin geometry
+        geom = h3_geopandas['Geometry'][h3_geopandas["Hexbin"] == hexbin]
+
+        # Create Hexbin
+        h3_UKR = ShapelyFeature(
+            geom,
+            map_crs,
+            edgecolor="k",
+            facecolor=colour_ramp[colour_ramp_choice]
+        )
+
+        # Plot hexbin
+        map.add_feature(h3_UKR)
+```
+
+The ``create_hexbins`` function aggregates individual events into hexbins using the Uber H3 hexagonal hierarchical geospatial indexing system[^4] (Uber H3, 2022) at a resolution of 5 (approx. 252km2). This function is created at this point in the script, but is called later on by the ``create_hexbin_maps`` function, allowing associated maps and themes (events/fatalities) to be plotted and symboloised dynamically.
+
+It begins by iterating over each event within the inputted ACLED dataset, reading its geometry. 
+
+```python
+for n in range(0, len(acled) - 1):
+
+        # Get ACLED XY
+        xy = acled.iloc[n]["geometry"]
+```
+
+It passes this XY geometry into the ``H3.geo_to_h3`` function which returns the unique id (UID) for the hexagon which the point is contained within.
+
+```python
+# Input X, Y, H3 resolution
+        hexbin = h3.geo_to_h3(xy.x, xy.y, 5)
+```
+
+It updates a dictionary to store this UID, it's geometry, and values for events and fatalities; this is then converted into a geodataframe using geopandas.
+
+```python
+# Calculate statistics to assign to hexbins
+        if hexbin not in acled_to_h3.keys():
+            acled_to_h3[hexbin] = {
+                "count" : 1,
+                "fatalities" : acled.iloc[n]["fatalities"],
+                "Boundary" : h3.h3_to_geo_boundary(hexbin, geo_json=False)
+             }
+        else:
+            acled_to_h3[hexbin]["count"] += 1
+            acled_to_h3[hexbin]["fatalities"] += acled.iloc[n]["fatalities"]
+```
+
+For for each bexagon, natural breaks (Jenks) values for the number of events and fatalities are calculated to create 4 classes based on natural groupings inherent in the data. These are used later in the script to apply a colour ramp symbology to display the data within a map frame.
+
+Finally, using the geometry a shapely feature is created, symbology is applied and the hexagon is added to the associated map as a feature.
+
+```python
+# Create Hexbin
+        h3_UKR = ShapelyFeature(
+            geom,
+            map_crs,
+            edgecolor="k",
+            facecolor=colour_ramp[colour_ramp_choice]
+        )
+
+        # Plot hexbin
+        map.add_feature(h3_UKR)
+```
+
+[^4]: Uber H3 Hexagonal hierarchical geospatial indexing system; [https://h3geo.org/](https://h3geo.org/)
 
 ### **Step 6: Output these data into a variety of graphs and map products**
 
