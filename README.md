@@ -2,9 +2,10 @@
 
 ## **Overview**
 
-Open-source intelligence (OSINT) is the collection and analysis of open-source (OS) datasets to provide intelligence products. The Armed Conflict Location & Event Data Project (ACLED)[^1] collects real-time data on the locations, dates, actors, fatalities of violence, and protests around the world (ACLED, 2022). As each event has an associated location and date, GIS can be employed to spatially, and temporally analyse this dataset to extract and visualise trends for intelligence products.
+Open-source intelligence (OSINT) is the collection and analysis of open-source (OS) datasets to provide intelligence products. The Armed Conflict Location & Event Data Project (ACLED)[^1]  collects real-time data on the locations, dates, actors, fatalities of violence, and protests around the world (ACLED, 2022). As each event has an associated location and date, GIS can be employed to spatially, and temporally analyse this dataset to extract and visualise trends for intelligence products.
 
-The ”ACLED Analysis” GIS tool was developed to automate such a workflow using the publicly available ACLED dataset; it will focus on the current conflict within Ukraine. It will detail incident and fatality counts over time, determine the most affected regions, and spatially plot the temporal patterns of the conflict.
+The ACLED Analysis tool was developed to automate such a workflow using the publicly available ACLED dataset; the deployed example will focus on the current conflict within Ukraine. It will detail the number of events and fatalities over time, determine the most affected regions, and spatially plot the temporal patterns of the conflict; five charts and five maps are produced to display these derived data.
+
 
 [^1]: The Armed Conflict Location & Event Data Project (ACLED); [http://acleddata.com](http://acleddata.com)
 
@@ -14,7 +15,7 @@ The code for this GIS tool is publicly hosted on GitHub and can be accessed from
 
 The code was developed using Jupyter Notebooks and Visual Studio Code and should be run using an integrated development environment (IDE) that can support the .ipynb file type; It is recommended that Anaconda Navigator[^2]  is used for this.
 
-Several python dependencies are needed for the code to run, these are detailed in table 1. These dependencies should be installed into a virtual environment by using the [environment.yml](https://github.com/BW-GIS-Developer/EGM722-ACLED-Analysis/blob/main/environments.yaml) file saved in the GitHub repository; this requires Anaconda to be installed as it uses conda-forge to install and saves the virtual environment within the Anacoda3 directory. Alternatively, they can be installed individually using the conda-forge channel from within the conda command prompt.
+Several python dependencies are needed for the tool to run, these are detailed in table 1. These dependencies should be installed into a virtual environment by using the [environment.yml](https://github.com/BW-GIS-Developer/EGM722-ACLED-Analysis/blob/main/environments.yaml) file saved in the GitHub repository; this requires Anaconda to be installed as it uses conda-forge to install and saves the virtual environment within the Anacoda3 directory. Alternatively, they can be installed individually using the conda-forge channel from within the conda command prompt.
 
 *Table 1: Python dependencies*
 
@@ -38,23 +39,61 @@ The datasets required to run the code are detailed in table 2. To use the ACLED 
 | Country Boundary (Ukraine) | shapefile | [https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1](https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1) |
 | Ukraine Oblasts            | shapefile | [https://hub.arcgis.com/datasets/dd3afd55a8fc428daef8ae395e8cd582_0](https://hub.arcgis.com/datasets/dd3afd55a8fc428daef8ae395e8cd582_0) |
 
+Commonly accessed global variables are defined the at start of the code. These can be changed, alongside other variables which will be detailed later, to allow the tool to work with other downloads of ACLED data. Those which may require change are detailed below:
+
+```python
+# ACLED dataset - read csv
+ukraine_acled_pandas = pd.read_csv(r"Data\ACLED\UkraineACLED.csv")
+
+# Ukraine country boundary
+ukraine_boundary_geopandas = gpd.read_file(r"Data\Boundaries\UKR_Boundary.shp")
+
+# Ukraine oblast bondaries
+ukraine_oblast_geopandas = gpd.read_file(r"Data\Boundaries\UKR_Adm.shp")
+
+# Start, middle and end dates
+date_start, date_mid, date_end = ((datetime(2022,1,1), datetime(2022,2,24), datetime(2022,4,15)))
+
+# Colours used for map products
+colour_ramp = ["ivory", "lightcoral", "firebrick", "darkred"]
+
+# Buffer values used for map products
+buffer_values = [5000, 10000, 15000, 20000, 25000, 30000]
+```
+
 [^2]: Anaconda Navigator; [https://docs.anaconda.com/anaconda/install/](https://docs.anaconda.com/anaconda/install/)
 [^3]: ACLED export filters applied - From: 01 Jan 22, To: 15 Apr 22, Region: Europe, Country: Ukraine
 
 ## **Methodology**
 
-This GIS tool has been developed to provide a solution to automate a common OSINT workflow using pre-existing, publicly available datasets; in this case, displaying trends within a subset of ACLED data. Multiple functions have been developed to perform various data engineering and analytical processes, allowing the script to follow a clear and logical workflow: 
+The tool was developed to provide a solution to automate a simulated OSINT workflow, using pre-existing publicly available datasets; in this case to display trends within a subset of ACLED data. A total of 11 functions were developed to perform various data engineering and analytical processes, allowing the code the flow and follow a logical workflow; the outline of which is detailed below:
 
-1.	Import python modules and set commonly used global variables.
-2.  Create three subsets of the original ACLED data for specified date ranges.
-3.	Calculate daily statistics for incidents and fatalities across the entire dataset.
-4.	Calculate statistics for incidents and fatalities across the entire dataset, split by oblast.
-5.	Aggregate individual incidents into hexbins, summarising the incidents and fatalities for each.
-6.	Output these data into a variety of graphs and map products
+    1.	Import required python modules
+    2.	Define commonly accessed global variables
+    3.	Create buffers
+    4.	Create 3 subsets of the input ACLED data
+        a.	Entire date range (start date to end date)
+        b.	First date section (start date to middle date)
+        c.	Last date section (middle date to end date)
+    5.	Calculate statistics within the entire date range subset
+        a.	Daily counts for events
+        b.	Daily counts for fatalities
+        c.	Accumulative counts for events
+        d.	Accumulative counts for fatalities
+        e.	Daily counts for events split by responsible actor
+    6.	Calculate statistics by oblast regions within the entire date range subset
+        a.	Total event counts
+        b.	Total fatality counts
+    7.	Aggregate events into hexbins
+        a.	Total events
+        b.	Total fatalities
+    8.	Create a series of graphs and maps to display these derived datasets
+    9.	Run all functions
 
-### **Step 1: Import python modules and set commonly used global variables**
 
-Import required python modules:
+### **Import required python modules**
+
+All python modules required for the script to execute without errors are imported, some of these are available with the native installation of python 3.x, and the rest are required to be installed separately; refer to the setup and installation for these dependencies. 
 
 ```python
 import geopandas as gpd
@@ -72,7 +111,9 @@ from shapely.geometry import Polygon, Point
 import h3, jenkspy
 ```
 
-Set commonly used global variables:
+### **Define commonly accessed global variables**
+
+Several variables are accessed multiple times throughout the script, these are defined at the global level to access within functions and save repeating lines of code. These variables relate to input datasets, boundary extents, map coordinate systems, date ranges, and colour schemes. If alternative ACLED datasets are used, some of these must be altered for the script to execute correctly; refer to the setup and installation for these variables and changes.
 
 ```python
 # ACLED dataset - read csv
@@ -121,17 +162,30 @@ GLB_outline = ShapelyFeature(global_boundary_geopandas["geometry"], map_crs, edg
 oblast_outline = ShapelyFeature(ukraine_oblast_geopandas["geometry"], map_crs, edgecolor='k', facecolor='tan')
 ```
 
-### **Step 2: Create three subsets of the original ACLED data for specified date ranges**
+### **Create buffers**
 
-Two functions were developed for this section of the workflow:
+A function called create_buffers is used to buffer the country of interest multiple times based on the global variable buffer_values. In doing so, the buffer can be applied to the map products as a feathered effect, allowing the country of interest to stand out.
+
+### **Create 3 subsets of the input ACLED data**
+
+This section of code relies upon two functions:
+
+1.	convert_to_datetime
+2.	calculate_datetime_ranges
+
+The first uses the strptime() function available in the datetime module to convert the original ACLED text date, formatted as 15-Apr-22 into a datetime date.
 
 ```python
 def convert_to_datetime(date):
     
     return datetime.strptime(date, "%d %B %Y")
+```
 
+The second creates 3 pandas dataframes for each of the date ranges defined. The convert_to_datetime function is applied to each of the dates in the original CSV, writing the output into a new column called date. This column is then used to filter out the dataframe rows where the date falls within each range, saving as a new dataframe, and sorting by date.
+
+```python
 def calculate_datetime_ranges(acled, columns, start, mid, end):
-    
+
     # Create a new column called "date" and convert the original string dates into datetime
     acled["date"] = acled["event_date"].apply(convert_to_datetime)
 
@@ -147,32 +201,34 @@ def calculate_datetime_ranges(acled, columns, start, mid, end):
     return acled_daterange_se[columns].sort_values(by=["date"]), acled_daterange_sm[columns].sort_values(by=["date"]), acled_daterange_me[columns].sort_values(by=["date"])
 ```
 
-The ``calculate_datetime_ranges`` function parses through the ``event_date`` column within the ACLED dataset, converting each from a ``string`` into a ``datetime date``; this is achieved by passing each string value into the ``convert_to_datetime`` function and storing the returned date value into a new column called ``date``.
+### **Calculate statistics within the entire date range subset**
 
-```python 
-acled["date"] = acled["event_date"].apply(convert_to_datetime)
-```
+This section of code relies upon one function: 
 
-The ``date`` column is then used to create a subsets of ACLED data for each date range, one for the entire dataset, one for pre-invasion, and one for post-invasion.
+    1.	calculate_statistics
 
-```python
-    # Create geopandas dataframes for date range start - end
-    acled_daterange_se = acled[(acled["date"] >= start) & (acled["date"] <= end)]
+This function creates a list of unique dates within the ACLED subset spanning the entire date range, sorting the list by date. For each date, multiple calculations are made, stored as variables, and then stored into a python dictionary, which is later outputted as a pandas dataframe; these variables are:
 
-    # Create geopandas dataframes for date range start - mid
-    acled_daterange_sm = acled[(acled["date"] < mid) & (acled["date"] >= start)]
-    
-    # Create geopandas dataframes for date range mid - end
-    acled_daterange_me = acled[(acled["date"] >= mid) & (acled["date"] <= end)]
-```
+    •	daily_count; The number of events
+    •	daily_fatal; The number of fatalities
+    •	daily_russian; The number of events where Russia is the actor
+    •	daily_ukraine; The number of events where Ukraine is the actor
+    •	daily_other; The number of events where another actor is responsible
 
-### **Step 3: Calculate daily statistics for incidents and fatalities across the entire dataset**
+Counter variables are used to calculate the accumulative sums for both events, and fatalities individually; respectively called count_sum and count_fatal.
 
-One function was developed for this section of the workflow:
+If an alternative ACLED dataset is used instead of the deployed one, changes to the following sections will need to be made to work with the theme of choice:
+
+    •	daily_russian: Update variable name and value within str.contains(“Russia”)
+    •	daily_ukraine: Update variable name and value within str.contains(“Ukraine”)
+    •	daily_other: Update variables used within the sum calculations
+    •	statistics_by_date: Update dictionary keys for “russian_actor” and “ukraine_actor” 
+        o	The append daily statistics section should also be updated to reflect this change 
+        o	e.g., statistics_by_date["russian_actor"].append(daily_russian)
 
 ```python
 def calculate_statistics(acled_all):
-    
+ 
     # Store unique dates in a list
     unique_dates_set = set(acled_all["date"].tolist())
     unique_dates = list(unique_dates_set)
@@ -200,6 +256,7 @@ def calculate_statistics(acled_all):
         # Calculate daily statistics
         daily_count = acled_all["date"].value_counts()[date]
         daily_fatal = acled_all.loc[acled_all["date"] == date, "fatalities"].sum()
+        daily_events = acled_all[acled_all["date"] == date]
         daily_russian = len(daily_events[daily_events["actor1"].str.contains("Russia")])
         daily_ukraine = len(daily_events[daily_events["actor1"].str.contains("Ukraine")])
         daily_other = daily_count - daily_russian - daily_ukraine
@@ -221,32 +278,30 @@ def calculate_statistics(acled_all):
     return pd.DataFrame(statistics_by_date).sort_values(by=["date"])
 ```
 
-The ``calculate_statistics`` function creates a list of unique dates within the ACLED subset spanning the entire date range, sorting these by ``date`` order. 
+### **Calculate statistics by oblast regions within the entire date range subset**
 
-For each date, calculations are made for:
+This section of code relies upon one function:
 
-- ``daily_count``: The number of events
-- ``daily_fatal``: The number of fatalities
-- ``daily_russian``: The number of events where Russia is the actor
-- ``daily_ukraine``: The number of events where Ukraine is the actor
-- ``daily_other``: The number of events where another actor is responsible
+    1.	count_by_oblast
 
-Counter variables are used to calculate the accumulative sums for events and fatalities.
+This function spatially joins events within the ACLED dataset to oblasts, where the event is contained within the oblast.
 
-```python
-count_sum += daily_count
-count_fatal += daily_fatal
-```
+For each oblast, values for the number of events, and fatalities are calculated, stored as variables, and then stored in a python dictionary; these variables are:
+	
+    •	count; The number of events in the current oblast
+    •	fatal; The number of fatalities in the current oblast
 
-This data for daily statistics is then appended into the ``statistics_by_date`` dictionary, which finally is converted into a pandas dataframe to return as the function output.
+Once complete, this dictionary is converted into a pandas dataframe, enabling it to be merged with the global variable oblasts. The merge is based on the oblast region name, relating the geometry for each oblast as oblasts is a geopandas dataframe.
 
-### **Step 4: Calculate statistics for incidents and fatalities across the entire dataset, split by oblast**
+Finally, for each region, a symbology value is created and used later to apply the correct colour theme based on the number of events or fatalities in each oblast. To achieve this, the python module jenkspy is used to create values based on natural breaks (Jenks). Four classes are calculated based on natural groupings within the data.
 
-One function was developed for this section of the workflow:
+If an alternative regional boundary dataset is used instead of the oblasts, changes to the following sections will need to be made to work with the theme of choice:
+
+    •	The column name Region is used to access oblast names, this should be updated to reflect the new dataset
 
 ```python
 def count_by_oblast(oblasts, acled):
-
+    
     # Create dictionary to store statistics
     statistics_by_oblast = {
         "Region" : [],
@@ -283,30 +338,26 @@ def count_by_oblast(oblasts, acled):
     return oblast_statistics
 ```
 
-The ``count_by_oblast`` function spatially joins the ACLED events to the Ukrainian oblasts.
+### **Aggregate events into hexbins**
 
-```python
-acled_oblast_sj = gpd.sjoin(oblasts, acled, how='inner', lsuffix='left', rsuffix='right')
-```
+This section of code relies upon one function:
 
-A list of oblast names is created and iterrated over to calculate the number of events and fatalities for each region; this is then appended to the ``statistics_by_oblast`` dictionary. Once complete, this dictionary is merged with the geopandas dataframe for the oblast regions to link these statistics to the oblast geometry.
+    1.	create_hexbins
 
-```python
-# Merge regions statistics to oblast regions to link geometry
-oblast_statistics = statistics_by_oblast_pandas.merge(oblasts[["Region", "geometry"]])
-```
+This function aggregates events into hexbins using the Uber H3 hexagonal hierarchical geospatial indexing system. Although created now, the function is called later on by the create_hexbin_maps function, which allows associated maps and themes (events/fatalities) to be spatially plotted and dynamically symbolised.
 
-Finally, for each region, natural breaks (Jenks) values for the number of events and fatalities are calculated to create 4 classes based on natural groupings inherent in the data. These are used later in the script to apply a colour ramp symbology to display the data within a map frame.
+For each event, the geometry is read to collate the XY coordinates. This X and Y are passed into the Uber H3 function geo_to_h3, which returns the unique id (UID) for the H3 hexagon the event is contained within. Each UID is stored as a key within a python dictionary, with the following values being assigned to the respective UID key:
 
-```python
- oblast_statistics["NBJ"] = pd.cut(oblast_statistics["count"], bins=jenkspy.jenks_breaks(oblast_statistics["count"], nb_class=4), labels=[1,2,3,4], include_lowest=True)
- ```
+    •	count: The number of events associated with the hexagon UID
+    •	fatalities: The number of fatalities associated with the hexagon UID
+    •	Boundary: The geometry of the Uber H3 hexagon
+        o	To calculate the boundary, pass the hexagon UID into the Uber H3 function h3_to_geo_boundary
 
- This function returns the oblast statistics, geometry, and symbology values as a pandas dataframe.
+This python dictionary is then converted into a geopandas dataframe, using the hexagon vertices as the geometry. 
 
-### **Step 5: Aggregate individual incidents into hexbins, summarising the incidents and fatalities for each**
+For each hexagon, a symbology value is created and used later to apply the correct colour theme based on the number of events or fatalities in each hexagon; this uses the same jenkspy method used previously for oblast regions.
 
-One function was developed for this section of the workflow:
+Finally, when later called upon as a function, based on the associated map and theme a shapely feature is created, symbology applied, and added to the map.
 
 ```python
 def create_hexbins(acled, map, theme, sorted_NBJ, colour_ramp):
@@ -382,64 +433,299 @@ def create_hexbins(acled, map, theme, sorted_NBJ, colour_ramp):
         map.add_feature(h3_UKR)
 ```
 
-The ``create_hexbins`` function aggregates individual events into hexbins using the Uber H3 hexagonal hierarchical geospatial indexing system[^4] (Uber H3, 2022) at a resolution of 5 (approx. 252km2). This function is created at this point in the script, but is called later on by the ``create_hexbin_maps`` function, allowing associated maps and themes (events/fatalities) to be plotted and symboloised dynamically.
+### **Create a series of graphs and maps to display these derived datasets**
 
-It begins by iterating over each event within the inputted ACLED dataset, reading its geometry. 
+This section of code relies upon three functions:
 
-```python
-for n in range(0, len(acled) - 1):
+    1.	create_acled_graphs
+    2.	create_oblast graphs
+    3.	create_hexbin maps
+    4.	calculate_centroids
 
-        # Get ACLED XY
-        xy = acled.iloc[n]["geometry"]
-```
+The first three functions take all previously created datasets, which are either pandas or geopandas dataframes, and graphically or spatially plot them into graphs and maps.
 
-It passes this XY geometry into the ``H3.geo_to_h3`` function which returns the unique id (UID) for the hexagon which the point is contained within.
+These functions create new figures or map frames, and for each, the titles and surrounding figure elements are set, and the data is queried, plotted, and styled.
 
-```python
-# Input X, Y, H3 resolution
-        hexbin = h3.geo_to_h3(xy.x, xy.y, 5)
-```
+The calculate_centroids function calculates the centroid of each oblast, which it then uses as the XY coordinate the place the oblast label.
 
-It updates a dictionary to store this UID, it's geometry, and values for events and fatalities; this is then converted into a geodataframe using geopandas.
+If alternative datasets or date ranges are to be used, then changes to the following sections will need to be made to work with the theme of choice.
 
-```python
-# Calculate statistics to assign to hexbins
-        if hexbin not in acled_to_h3.keys():
-            acled_to_h3[hexbin] = {
-                "count" : 1,
-                "fatalities" : acled.iloc[n]["fatalities"],
-                "Boundary" : h3.h3_to_geo_boundary(hexbin, geo_json=False)
-             }
-        else:
-            acled_to_h3[hexbin]["count"] += 1
-            acled_to_h3[hexbin]["fatalities"] += acled.iloc[n]["fatalities"]
-```
-
-For for each bexagon, natural breaks (Jenks) values for the number of events and fatalities are calculated to create 4 classes based on natural groupings inherent in the data. These are used later in the script to apply a colour ramp symbology to display the data within a map frame.
-
-Finally, using the geometry a shapely feature is created, symbology is applied and the hexagon is added to the associated map as a feature.
+For the create_acled_graphs function: 
+	
+    •	Titles
+    •	Plotted data and columns
+    •	x_ticks
+    •	y_ticks
+    •	Legend labels
+    •	Vertical lines and labels for key dates
 
 ```python
-# Create Hexbin
-        h3_UKR = ShapelyFeature(
-            geom,
-            map_crs,
-            edgecolor="k",
-            facecolor=colour_ramp[colour_ramp_choice]
+def create_acled_graphs(acled_daily_statistics): 
+
+    # Create figure and axis
+    figure_1, (axis_1, axis_2, axis_3) = plt.subplots(nrows=3, ncols=1, figsize=(20,20))
+
+    axis_list = [axis_1, axis_2, axis_3]
+
+    # Set titles
+    axis_1.set_title("ACLED : Daily Events and Fatalities",
+                    fontsize=18, 
+                    loc="left", 
+                    weight="bold")
+
+    axis_2.set_title("ACLED : Accumulative Events and Fatalities",
+                    fontsize=18, 
+                    loc="left", 
+                    weight="bold")
+
+    axis_3.set_title("ACLED : Daily Force Activity",
+                    fontsize=18, 
+                    loc="left", 
+                    weight="bold")
+
+    # Plot daily statistics by date
+    axis_1.plot(acled_daily_statistics["date"], 
+                acled_daily_statistics["count"], 
+                color="yellow", 
+                linestyle=":",
+                label="Events ({})".format(acled_daily_statistics["count"].sum()))
+
+    axis_1.plot(acled_daily_statistics["date"], 
+                acled_daily_statistics["fatalities"], 
+                color="r", 
+                linestyle=":", 
+                label="Fatalities ({})".format(acled_daily_statistics["fatalities"].sum()))
+
+    axis_2.plot(acled_daily_statistics["date"], 
+                acled_daily_statistics["count_sum"], 
+                color="yellow", 
+                linestyle=":",
+                label="Events ({})".format(acled_daily_statistics["count_sum"].max()))
+
+    axis_2.plot(acled_daily_statistics["date"], 
+                acled_daily_statistics["fatalities_sum"],
+                color="r", 
+                linestyle=":",
+                label="Fatalities ({})".format(acled_daily_statistics["fatalities_sum"].max()))
+
+    axis_3.plot(acled_daily_statistics["date"], 
+                acled_daily_statistics["ukraine_actor"], 
+                color="blue", 
+                linestyle=":",
+                label="Ukrainian ({})".format(acled_daily_statistics["ukraine_actor"].sum()))
+
+    axis_3.plot(acled_daily_statistics["date"], 
+                acled_daily_statistics["russian_actor"], 
+                color="red", 
+                linestyle=":",
+                label="Russian ({})".format(acled_daily_statistics["russian_actor"].sum()))
+
+    axis_3.plot(acled_daily_statistics["date"], 
+                acled_daily_statistics["other_actor"], 
+                color="darkorange", 
+                linestyle=":",
+                label="Other ({})".format(acled_daily_statistics["other_actor"].sum()))
+
+    # Set x and y axis labels
+    x_ticks = [date_start, datetime(2022,2,1), datetime(2022,2,24), datetime(2022,4,1), date_end]  # UPDATE : Change for appropriate date values between date_start and date_end variables
+
+    y_ticks = [[i for i in range(200, acled_daily_statistics["fatalities"].max() + 200, 200)], # UPDATE : ( Start value, max value, increment value )
+            [i for i in range(1000, acled_daily_statistics["count_sum"].max() + 1000, 1000)], # UPDATE : ( Start value, max value, increment value )
+            [i for i in range(20, 110, 20)]] # UPDATE : ( Start value, max value, increment value )
+
+    # Format styling and legend
+    for i, ax in enumerate(axis_list):
+        ax.set_facecolor("lightslategray")
+        ax.set_xticks(
+            ticks=x_ticks, 
+            labels=["01 Jan 2022", "01 Feb 2022", "24 Feb 2022", "01 Apr 2022", "15 Apr 2022"], # UPDATE : Change to match x_tick values
+            fontsize=14
         )
-
-        # Plot hexbin
-        map.add_feature(h3_UKR)
+        ax.set_yticks(ticks=y_ticks[i], labels=y_ticks[i], fontsize=14)
+        ax.hlines(y=y_ticks[i], xmin=date_start, xmax=date_end, color="whitesmoke", linestyle=":")
+        ax.vlines(
+            x=mdates.date2num(datetime(2022,2,24)), # UPDATE : Vertical lines for key events
+            ymin=0, 
+            ymax=y_ticks[i][-1],
+            color="k", 
+            linestyle=":",
+            alpha=0.5,
+            label="Russian Invasion of Ukraine - 24 February 2022" # UPDATE : Name of key event
+        )
+        ax.legend(fontsize=14, loc="upper left", facecolor="slategray")
 ```
 
-[^4]: Uber H3 Hexagonal hierarchical geospatial indexing system; [https://h3geo.org/](https://h3geo.org/)
+For the create_oblast_graphs function: 
+	
+    •	Titles
+    •	Plotted data and columns
+    •	y_ticks
+    •	Extent for vertical lines
 
-### **Step 6: Output these data into a variety of graphs and map products**
+```python
+def create_oblast_graphs(oblast_statistics):
 
-## **Results**
+    # Create figure and axis
+    figure_2, (axis_4, axis_5) = plt.subplots(nrows=1, ncols=2, figsize=(60,20))
 
-## **Troubleshooting**
+    axis_list = [axis_4, axis_5]
 
-## **References**
+    # Reverse A-Z into Z-A for plot labels
+    oblast_statistics = oblast_statistics.sort_values(by="Region", ascending=False)
 
-Word count tracker : 602
+    # Set titles
+    axis_4.set_title("ACLED : Total Events by Ukranian Oblast (01 Jan 22 - 15 Apr 22)", # UPDATE : Change for dataset date range
+                    fontsize=24, 
+                    loc="left", 
+                    weight="bold")
+
+    axis_5.set_title("ACLED : Total Fatalities by Ukranian Oblast (01 Jan 22 - 15 Apr 22)", # UPDATE : Change for dataset date range
+                    fontsize=24, 
+                    loc="left", 
+                    weight="bold")
+
+    # Plot oblast_statistics
+    axis_4.barh(oblast_statistics["Region"], oblast_statistics["count"], color="yellow", alpha=0.5)
+    axis_5.barh(oblast_statistics["Region"], oblast_statistics["fatalities"], color="r", alpha=0.5)
+
+    # Set y axis labels
+    y_ticks = [[i for i in range(250, oblast_statistics["count"].max() + 250, 250)], [i for i in range(200, oblast_statistics["fatalities"].max() + 200, 200)]] # UPDATE : ( Start value, max value, increment value )
+
+    # Format styling
+    for index, axis in enumerate(axis_list):  
+        axis.set_facecolor("lightslategray")
+        axis.vlines(x=y_ticks[index], ymin="Autonomous Republic of Crimea", ymax="Zhytomyr region", color="whitesmoke", linestyle=":")
+        axis.tick_params(axis='x', labelsize=18)
+        axis.tick_params(axis='y', labelsize=18)
+
+    for index, value in enumerate(oblast_statistics["count"]):
+        axis_4.text(value + 20, index, str(value), color="k", fontsize=18, va="center")
+
+    for index, value in enumerate(oblast_statistics["fatalities"]):
+        axis_5.text(value + 2, index, str(value), color="k", fontsize=18, va="center")  
+```
+
+For the create_hexbin_maps function: 
+
+    •	Titles
+
+```python
+def create_hexbin_maps(acled_daterange_sm, acled_daterange_me, acled_daily_statistics):
+
+    """
+
+    Create hexbins using Uber h3 geospatial indexing
+
+    Parameters : 
+
+        argument 1 (geopandas dataframe) : ACLED dataset for daterange start - mid
+    
+        argument 2 (geopandas dataframe) : ACLED dataset for daterange mid - end
+        
+        argument 3 (geopandas dataframe) : DataFrame for daily ACLED statistics
+
+
+    Returns : 
+
+        Creates various hexbin maps for fatalities and counts for the start - mid / mid - end data ranges
+
+    """
+
+    # List of map titles and associated DataFrames
+    map_list = {
+        "map_hex_count_1" : {"Title" : "ACLED : Event Count for 01 Jan 22 - 24 Feb 22", "GPD" : acled_daterange_sm}, # UPDATE : Change title to match dates
+        "map_hex_count_2" : {"Title" : "ACLED : Event Count for 25 Feb 22 - 15 Apr 22", "GPD" : acled_daterange_me}, # UPDATE : Change title to match dates
+        "map_hex_fatal_1" : {"Title" : "ACLED : Fatalities for 01 Jan 22 - 24 Feb 22", "GPD" : acled_daterange_sm}, # UPDATE : Change title to match dates
+        "map_hex_fatal_2" : {"Title" : "ACLED : Fatalities for 25 Feb 22 - 15 Apr 22", "GPD" : acled_daterange_me} # UPDATE : Change title to match dates
+        }
+        
+    for map_theme, vals in map_list.items():
+
+        map = plt.figure(figsize=(20,30))
+
+        map_crs = ccrs.Mercator()
+
+        map_ax = plt.axes(projection=map_crs)
+
+        # Set either count or fatalities theme
+        if map_theme.startswith("map_hex_count"):
+            theme = "count"
+        elif map_theme.startswith("map_hex_fatal"):
+            theme = "fatalities"
+
+        # Calculate NBJ values for theme
+        acled_daily_statistics["NBJ"] = pd.cut(
+            acled_daily_statistics[theme],
+            bins=jenkspy.jenks_breaks(acled_daily_statistics[theme], nb_class=4),
+            include_lowest=True)
+
+        set_NBJ = set(acled_daily_statistics["NBJ"].values.tolist())
+
+        list_NBJ = list(set_NBJ)
+
+        list_sort = []
+
+        # List the max value for each NBJ range
+        for i in list_NBJ:
+            list_sort.append(int(i.right))
+
+        list_sort.sort()
+
+        leg_handle = []
+
+        leg_lable = []
+
+        # Create legend handles and labels based on theme and NBJ values
+        for i, v in enumerate(list_sort):
+            
+            leg_handle.append(mpatch.Rectangle((0, 0), 1, 1, facecolor=colour_ramp[i], edgecolor="k"))
+
+            if i == 0:
+                leg_lable.append("{} : {} - {}".format(theme.capitalize(), 0, list_sort[i]))
+            else:
+                leg_lable.append("{} : {} - {}".format(theme.capitalize(), list_sort[i-1], list_sort[i]))
+
+        map_ax.set_title(vals["Title"], 
+                        fontsize=20, 
+                        weight="bold",
+                        loc="left")
+
+        map_ax.add_feature(GLB_outline)
+
+        # Create multiple buffers with opacity for visual effect
+        create_buffers(buffer_values, transparency_values, map_ax)
+
+        map_ax.legend(leg_handle, leg_lable, title="Legend", loc="upper left", framealpha=1, fontsize=14, title_fontsize=16)
+
+        map_ax.add_feature(oblast_outline)
+        map_ax.set_facecolor("skyblue")
+
+        map_ax.set_extent([xmin - 3, xmax + 1, ymin - 1, ymax + 1], crs=map_crs)
+
+        create_hexbins(vals["GPD"], map_ax, theme, list_sort, colour_ramp)
+```
+
+### **Run all functions**
+
+Once all the above functions have been defined and set up correctly, the last part of the code calls all these functions to run, assigning new variables from the outputs in which to pass into the proceeding functions.
+
+### **Results**
+
+This tool outputs a series of graphs and maps  displaying various categorical, temporal, and spatial trends within the dataset. The deployed tool and associated datasets will produce the following OSINT products.
+
+**Daily event statistics**
+
+A series of lines graphs are created which display counts for the number of daily events and fatalities, events and fatalities accumulating over time, and a breakdown of daily events split by the responsible actors (figure 12).
+
+
+**Oblast statistics**
+
+A pair of horizontal bar charts are created, showing the breakdown of total events and fatalities for each Ukrainian Oblast.
+
+**Oblast events**
+
+A choropleth map is created which displays values for the number of events within each oblast. Value ranges are calculated using natural breaks (Jenks), creating four classes based on natural groupings inherent in the data.
+
+**Aggregated statistics**
+
+Two pairs of maps are created, one for events and the other for fatalities, showing counts of aggregated data statistics temporally for the two date ranges; in the deployed tool this is pre-invasion and post-invasion of Ukraine. Data is aggregated using the Uber H3 hexagonal hierarchical geospatial indexing system at a resolution of 5 (approx. 252km2).
