@@ -170,8 +170,8 @@ A function called create_buffers is used to buffer the country of interest multi
 
 This section of code relies upon two functions:
 
-1.	convert_to_datetime
-2.	calculate_datetime_ranges
+    1.	convert_to_datetime
+    2.	calculate_datetime_ranges
 
 The first uses the strptime() function available in the datetime module to convert the original ACLED text date, formatted as 15-Apr-22 into a datetime date.
 
@@ -344,7 +344,7 @@ This section of code relies upon one function:
 
     1.	create_hexbins
 
-This function aggregates events into hexbins using the Uber H3 hexagonal hierarchical geospatial indexing system. Although created now, the function is called later on by the create_hexbin_maps function, which allows associated maps and themes (events/fatalities) to be spatially plotted and dynamically symbolised.
+This function aggregates events into hexbins using the Uber H3 hexagonal hierarchical geospatial indexing system[^4]. Although created now, the function is called later on by the create_hexbin_maps function, which allows associated maps and themes (events/fatalities) to be spatially plotted and dynamically symbolised.
 
 For each event, the geometry is read to collate the XY coordinates. This X and Y are passed into the Uber H3 function geo_to_h3, which returns the unique id (UID) for the H3 hexagon the event is contained within. Each UID is stored as a key within a python dictionary, with the following values being assigned to the respective UID key:
 
@@ -358,6 +358,8 @@ This python dictionary is then converted into a geopandas dataframe, using the h
 For each hexagon, a symbology value is created and used later to apply the correct colour theme based on the number of events or fatalities in each hexagon; this uses the same jenkspy method used previously for oblast regions.
 
 Finally, when later called upon as a function, based on the associated map and theme a shapely feature is created, symbology applied, and added to the map.
+
+[^4] Uber H3 Hexagonal hierarchical geospatial indexing system [h3geo](https://h3geo.org/)
 
 ```python
 def create_hexbins(acled, map, theme, sorted_NBJ, colour_ramp):
@@ -715,7 +717,7 @@ This tool outputs a series of graphs and maps  displaying various categorical, t
 
 **Daily event statistics**
 
-A series of lines graphs are created which display counts for the number of daily events and fatalities, events and fatalities accumulating over time, and a breakdown of daily events split by the responsible actors (figure 12).
+A series of lines graphs are created which display counts for the number of daily events and fatalities, events and fatalities accumulating over time, and a breakdown of daily events split by the responsible actors.
 
 
 **Oblast statistics**
