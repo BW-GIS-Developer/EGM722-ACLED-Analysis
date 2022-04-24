@@ -359,7 +359,7 @@ For each hexagon, a symbology value is created and used later to apply the corre
 
 Finally, when later called upon as a function, based on the associated map and theme a shapely feature is created, symbology applied, and added to the map.
 
-[^4] Uber H3 Hexagonal hierarchical geospatial indexing system [h3geo](https://h3geo.org/)
+[^4]: Uber H3 Hexagonal hierarchical geospatial indexing system [h3geo](https://h3geo.org/)
 
 ```python
 def create_hexbins(acled, map, theme, sorted_NBJ, colour_ramp):
